@@ -188,7 +188,6 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
     <li class="sub"><a href="#a2-candidates">Colour candidates</a></li>
     <li class="sub"><a href="#a2-mode">Coding mode</a></li>
     <li class="sub"><a href="#a2-encoder">Encoder choices</a></li>
-    <li class="sub"><a href="#a2-why">Design measurements</a></li>
     <li><a href="#compare">Comparison</a></li>
   </ol>
 </nav>
@@ -198,7 +197,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 <p class="lede">A lossless format for 24-bit RGB images, with two compression algorithms that share a single file header.</p>
 
 <h2 id="overview">Overview</h2>
-<p>A PIX file holds one image of 8-bit R, G and B samples, with no alpha channel. The viewer and the command-line tool put an image with transparency on a white background before encoding it. The image is compressed with one of two algorithms, which the header names. A decoder reads both.</p>
+<p>A PIX file holds one image of 8-bit R, G and B samples, with no alpha channel. An image with transparency has to be flattened, for example onto a white background, before it is encoded. The image is compressed with one of two algorithms, which the header names. A decoder reads both.</p>
 
 <div class="cards">
   <div class="card a1">
@@ -208,7 +207,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
       <li>16×16 blocks, each with its own cache of 80 colours; a global cache holds 8192 more</li>
       <li>Each pixel gets the shortest code that fits: a repeat, a run, the pixel above, a cache slot, a MED residual or a literal colour</li>
       <li>The nibble stream is deflated with zlib</li>
-      <li>Fast: a 1280×960 photo encodes in about 0.35 s and decodes in 0.06 s</li>
+      <li>Fast to encode and very fast to decode</li>
     </ul>
   </div>
   <div class="card a2">
@@ -218,12 +217,11 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
       <li>Pixels are coded row by row, with no blocks</li>
       <li>Each pixel is one of up to 9 candidate colours, a colour from a list of 16384 recently used colours, or three residuals against a blended prediction</li>
       <li>Every decision is a context-modelled bit, so a well-predicted pixel costs a fraction of a bit</li>
-      <li>About 27% smaller than algorithm 1, but takes about 1 µs per pixel each way</li>
+      <li>Typically about a quarter smaller than algorithm 1, but much slower; decoding costs as much as encoding</li>
     </ul>
   </div>
 </div>
 
-<p>The command-line tool <code>pix</code> encodes with algorithm 1 unless given <code>-a 2</code>. The viewer <code>pixview</code> saves with algorithm 2 by default. In the source, <code>src/pix_codec.cpp</code> implements the file format and algorithm 1, and <code>src/pix2_codec.cpp</code> implements algorithm 2. The design notes are <code>doc/design.txt</code> and <code>doc/design2.txt</code>.</p>
 
 <h2 id="file">File layout</h2>
 <p>Every file starts with a 20-byte header. All numbers are little-endian.</p>
@@ -275,7 +273,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 <pre><code>for (Y = 0; Y &lt; paddedHeight; Y += 16)
     for (X = 0; X &lt; paddedWidth; X += 16)
         processBlock(X, Y);       // 256 pixels, row by row</code></pre>
-<p>If the width or height isn't a multiple of 16, the encoder pads the image to whole blocks. Each row's last pixel is repeated to the right, and the last row is repeated downwards. The padding is coded like any other pixels. The header keeps the original size, so the decoder decodes the padded image and keeps only the original area. Repeating edge pixels gave files 0.1% smaller than black padding.</p>
+<p>If the width or height isn't a multiple of 16, the encoder pads the image to whole blocks. Each row's last pixel is repeated to the right, and the last row is repeated downwards. The padding is coded like any other pixels. The header keeps the original size, so the decoder decodes the padded image and keeps only the original area.</p>
 <p>Blocks only decide which cache1 is in use and where runs may end. A run never crosses a block boundary. Prediction, the pixel above and the colour history all work across block boundaries.</p>
 
 <h3 id="a1-state">Coder state</h3>
@@ -367,7 +365,7 @@ decode:  g = P.g + dG        r = P.r + dG + dR          b = P.b + dG + dB      (
     </ol>
   </li>
 </ol>
-<p>Residual codes come before the caches because they compress much better under zlib. Neighbouring residuals are often alike, so zlib finds repeated byte patterns in them. The single-nibble <code>F</code> code replaced an earlier uncached literal, and made files 2.5% smaller.</p>
+<p>Residual codes come before the caches because they compress much better under zlib. Neighbouring residuals are often alike, so zlib finds repeated byte patterns in them.</p>
 
 <h3 id="a1-example">Worked example</h3>
 <p>The 16×4 image below has a white row, a blue bar, a grey-blue gradient and the bar again. Each pixel is labelled with the code that places it. A coloured left edge marks the first pixel of each code; unlabelled pixels belong to the code on their left. Hover over a pixel to see its coordinates and colour.</p>
@@ -445,7 +443,7 @@ decode:  g = P.g + dG        r = P.r + dG + dR          b = P.b + dG + dB      (
   <span style="--c: var(--k-res)">MED residual</span>
   <span style="--c: var(--k-med)">prediction run</span>
 </div>
-<p>The image is padded to 16×16. The rows below it repeat the last row, and the final <code>0E B1</code> run places those 195 pixels too. This is the listing from <code>pix r</code>, shortened:</p>
+<p>The image is padded to 16×16. The rows below it repeat the last row, and the final <code>0E B1</code> run places those 195 pixels too. This is an encoder's listing of the codes, shortened:</p>
 <pre><code>addr  nibbles   code    pixel(s)            colour   explanation
 0000  05 A      SMALL   (0,0)               #FFFFFF  pred #000000, dG=-1 dR=0 dB=0
 0003  3 F       RUN     (1,0)-(2,1) x18     #FFFFFF  last colour 18 times
@@ -494,7 +492,7 @@ crop the padded image to width × height</code></pre>
 <!-- ================================================================== -->
 <h2 id="a2">Algorithm 2: prediction and arithmetic coding <span class="tag a2">A2</span></h2>
 <p>Algorithm 1 leaves part of the work to zlib, which knows nothing about images. Algorithm 2 models the image directly. Every decision is a binary event coded by an adaptive binary range coder, with probabilities chosen by the pixel's surroundings. A pixel the model expects costs well under one bit.</p>
-<p>The encoder and decoder run the same code (class <code>Pix2Coder</code>). When encoding, each call writes a bit; when decoding, the same call reads it. All arithmetic the decoder depends on is integer, so a file decodes the same on every platform.</p>
+<p>The encoder and decoder run the same model and make the same decisions in the same order: where the encoder writes a bit, the decoder reads it. All arithmetic the decoder depends on is integer, so a file decodes the same on every platform.</p>
 
 <h3>Data</h3>
 <p>After the 20-byte header (algorithm <code>"A2"</code>, unpacked size width × height × 3) come:</p>
@@ -571,7 +569,7 @@ while range &lt; 2^24:  shift one byte out,  range &lt;&lt;= 8</code></pre>
 <pre><code>s_i      = 2·err_i(W) + 2·err_i(N) + err_i(NW) + err_i(NE) + 1      // 0 outside the image
 weight_i = 2^32 / s_i²                                              // integer, from a table
 spatial  = (Σ weight_i · pred_i + Σ weight_i / 2) / Σ weight_i</code></pre>
-<p>A predictor that was exact around the pixel dominates the blend; one that missed counts for very little. Weighting by 1/s² compressed better than 1/s or 1/s³.</p>
+<p>A predictor that was exact around the pixel dominates the blend; one that missed counts for very little.</p>
 
 <h4>G first, then R and B follow G</h4>
 <p>Channels are coded in the order G, R, B. After G is known, its prediction error eG = G − predG is added to the spatial prediction of R and of B. If the pixel is brighter than expected in G, it is probably brighter in R and B too:</p>
@@ -584,7 +582,7 @@ R, B:   base = clamp(spatial + eG)</code></pre>
 <pre><code>corr     = round(sum / count)            // 0 if count is 0
 pred     = clamp(base + corr)
 residual = (value − pred) wrapped to −128..127       decode: value = (pred + residual) &amp; 255</code></pre>
-<p>Clipping the samples matters: without it, a single sharp edge shifted the predictions of the flat areas around it, and UI images grew from 173% to 203% of algorithm 1 during development.</p>
+<p>Clipping the samples matters: without it, a single sharp edge would shift the predictions of the flat areas around it.</p>
 <p>Each residual is coded with a ResidualModel chosen by the channel, the activity bucket, and, for R and B, the size of eG: 0, 1, 2–3, 4–7 or 8+.</p>
 
 <h3 id="a2-candidates">Colour candidates</h3>
@@ -600,10 +598,10 @@ residual = (value − pred) wrapped to −128..127       decode: value = (pred +
 hash4 = ((W·0x9E3779B1) ^ (N·0x85EBCA77) ^ (NW·0x27D4EB2F) ^ (NE·0x165667B1)) · 0xC2B2AE3D &gt;&gt; 12
                                                          colours as 0xRRGGBB; after every pixel
                                                          both tables store its colour at these hashes</code></pre>
-<p>The hash tables are what make repeated text cheap. When the same letter shape appears again, the same neighbourhoods recur, and each one remembers the colour that came next. They shrank the UI test images from 74% to 67% of algorithm 1.</p>
+<p>The hash tables are what make repeated text cheap. When the same letter shape appears again, the same neighbourhoods recur, and each one remembers the colour that came next.</p>
 
 <h4>Recent colours</h4>
-<p>The coder keeps a move-to-front list of up to 16384 distinct colours, most recently used first. After each pixel, its colour moves to the front; when the list is full, the least recently used colour drops off. Frequently used colours therefore keep small indexes, which cost few bits. One move-to-front list did better than a short recent list combined with a 4096-colour cache in insertion order.</p>
+<p>The coder keeps a move-to-front list of up to 16384 distinct colours, most recently used first. After each pixel, its colour moves to the front; when the list is full, the least recently used colour drops off. Frequently used colours therefore keep small indexes, which cost few bits.</p>
 
 <h3 id="a2-mode">Coding mode</h3>
 <p>Each pixel's mode is stored, because the mode of W and N is part of most contexts: 0 = predicted colour, 1 = other candidate, 2 = recent colour, 3 = residuals. A missing W or N counts as mode 3. The bits are coded in this order:</p>
@@ -632,32 +630,9 @@ hash4 = ((W·0x9E3779B1) ^ (N·0x85EBCA77) ^ (NW·0x27D4EB2F) ^ (NE·0x165667B1)
 </ul>
 <p>On the 16×4 example image, algorithm 2 coded 30 pixels as the predicted colour, 16 as another candidate and 18 with residuals. At 87 bytes it is larger than algorithm 1's 64 bytes, because such a small image gives the adaptive models too few pixels to learn from. On real images it is almost always smaller (see the <a href="#compare">comparison</a>).</p>
 
-<h3 id="a2-why">Design measurements</h3>
-<p>These steps were measured on <code>test/corpus</code> while the algorithm was designed. Each size is relative to algorithm 1:</p>
-<div class="table-wrap"><table>
-  <tr><th>Step</th><th class="num">Photos</th><th class="num">UI</th></tr>
-  <tr><td>Residual coding only (MED-like blend + arithmetic coding)</td><td class="num">94%</td><td class="num">173%</td></tr>
-  <tr><td>+ neighbour colours and recent colours</td><td class="num">73%</td><td class="num">87%</td></tr>
-  <tr><td>+ hash tables of colours remembered for a neighbourhood</td><td class="num"></td><td class="num">74% → 67%</td></tr>
-  <tr><td>Final</td><td class="num">71%</td><td class="num">66%</td></tr>
-</table></div>
-<ul>
-  <li>Residuals alone were poor on UI images, which need whole colours to be coded.</li>
-  <li>The predicted colour works as a candidate only if its context includes "prediction equals W / N".</li>
-  <li>The fifth predictor, (W + N) / 2, saved 0.6%. NE as a sixth predictor saved only 0.07% more, so it isn't used.</li>
-  <li>A slow-estimate shift of 9 beat 7 and 10.</li>
-</ul>
-
 <!-- ================================================================== -->
 <h2 id="compare">Comparison</h2>
-<p>Total file sizes for the 30 images in <code>test/corpus</code>, against PNG saved by Pillow with <code>optimize=True</code>:</p>
-<div class="table-wrap"><table>
-  <tr><th>Category</th><th class="num">Optimized PNG</th><th class="num">PIX algorithm 1</th><th class="num">PIX algorithm 2</th></tr>
-  <tr><td>Photos (9)</td><td class="num">3.77 MB</td><td class="num">3.40 MB (90%)</td><td class="num">2.43 MB (64%)</td></tr>
-  <tr><td>Renders (8)</td><td class="num">6.29 MB</td><td class="num">5.77 MB (92%)</td><td class="num">4.42 MB (70%)</td></tr>
-  <tr><td>UI and graphics (13)</td><td class="num">4.46 MB</td><td class="num">2.86 MB (64%)</td><td class="num">1.89 MB (42%)</td></tr>
-</table></div>
-
+<p>Both algorithms are lossless and use the same header; they differ in how much work they spend on each pixel:</p>
 <div class="table-wrap"><table>
   <tr><th></th><th>Algorithm 1</th><th>Algorithm 2</th></tr>
   <tr><td>Unit of coding</td><td>Nibble codes in 16×16 blocks</td><td>Context-modelled bits, pixel by pixel</td></tr>
@@ -665,12 +640,11 @@ hash4 = ((W·0x9E3779B1) ^ (N·0x85EBCA77) ^ (NW·0x27D4EB2F) ^ (NE·0x165667B1)
   <tr><td>Prediction</td><td>MED (JPEG-LS)</td><td>Blend of 5 predictors, G error passed on to R and B, bias correction</td></tr>
   <tr><td>Colour reuse</td><td>last / next-to-last, cache1 (80 per block), cache2 (8192)</td><td>9 candidates (including 2 neighbourhood hash tables), move-to-front list of 16384</td></tr>
   <tr><td>Integrity check</td><td>Stream structure, sizes and zlib</td><td>CRC-32 of the decoded pixels</td></tr>
-  <tr><td>Speed (1280×960 photo)</td><td>encode 0.35 s, decode 0.06 s</td><td>encode 1.3 s, decode 1.1 s</td></tr>
-  <tr><td>Size vs. PNG</td><td>Smaller on all but one photo (+2%)</td><td>Smaller on every test image</td></tr>
-  <tr><td>Random noise</td><td>113% of raw RGB</td><td>101% of raw RGB</td></tr>
+  <tr><td>Speed</td><td>Fast to encode, very fast to decode</td><td>Much slower; decoding costs as much as encoding</td></tr>
+  <tr><td>Compression</td><td>Usually smaller than PNG, especially for screenshots, maps and graphics</td><td>Typically about a quarter smaller than algorithm 1</td></tr>
+  <tr><td>Random noise</td><td>Grows by about 13% over raw RGB</td><td>Grows by about 1% over raw RGB</td></tr>
 </table></div>
-<p>Algorithm 2 is larger than algorithm 1 on only 2 of the 30 test images: a small gradient (761 vs. 579 bytes) and a text-mode screenshot (+5%).</p>
-<div class="note"><strong>When to use which:</strong> algorithm 1 decodes about 18 times faster, which matters when images are decoded often. Algorithm 2 gives the smallest files, which matters most for storage and transfer.</div>
+<div class="note"><strong>When to use which:</strong> algorithm 1 decodes many times faster, which matters when images are decoded often. Algorithm 2 gives the smallest files, which matters most for storage and transfer.</div>
 
 </main>
 </div>
