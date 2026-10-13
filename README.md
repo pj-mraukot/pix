@@ -1,4 +1,15 @@
 # PIX
+Few years ago I was experimenting with nibble (4bits) based lossless image encoder.
+It was mostly targeted at screenshots and maps (compressing map tiles from sources such as Open street maps) 
+Results were promising, some images were 30% smaller than PNG.
+Recently I asked Claude to re-implement my old algorithm.
+It did that, and additionally made GUI viewer/converter.
+That was PIX algorithm 1 (A1) 
+I was curious whether Claude could improve and create more efficient algorithm than mine.
+Task wasn't easy because my algorithm was on average already 30% better than PNG.
+Claude succeeded creating algorithm PIX (A2), which in some cases creates files which are half the size of PNG.
+This is very impressive result.
+
 
 PIX is a lossless image format for 24-bit RGB images. This repository contains:
 
