@@ -19,10 +19,10 @@ PIX is a lossless image format for 24-bit RGB images. This repository contains:
 
 ## Download
 
-Ready-to-use programs are on the [Releases](https://github.com/pj-mraukot/pix/releases/latest) page:
+Ready-to-use programs are in the [`release/`](release/) folder:
 
-- **[pix-windows-x64.zip](https://github.com/pj-mraukot/pix/releases/latest/download/pix-windows-x64.zip)**: the viewer for 64-bit Windows, a single `pixview.exe`, nothing to install
-- **[pix-linux-x64.tar.gz](https://github.com/pj-mraukot/pix/releases/latest/download/pix-linux-x64.tar.gz)**: the command-line tool `pix` and the Qt viewer `pixview` for Ubuntu 24.04, Linux Mint 22 and newer (needs `sudo apt install libpng16-16t64 libjpeg-turbo8 zlib1g libqt6widgets6t64`)
+- **[pix-windows-x64.zip](https://github.com/pj-mraukot/pix/raw/main/release/pix-windows-x64.zip)**: the viewer for 64-bit Windows, a single `pixview.exe`, nothing to install
+- **[pix-linux-x64.tar.gz](https://github.com/pj-mraukot/pix/raw/main/release/pix-linux-x64.tar.gz)**: the command-line tool `pix` and the Qt viewer `pixview` for Ubuntu 24.04, Linux Mint 22 and newer (needs `sudo apt install libpng16-16t64 libjpeg-turbo8 zlib1g libqt6widgets6t64`)
 
 On other systems, build from source as described below.
 
