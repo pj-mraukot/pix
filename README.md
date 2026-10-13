@@ -163,9 +163,12 @@ src/            codecs (pix_codec: algorithm 1 and the file format, pix2_codec: 
                 image loading (libpng, libjpeg, own BMP reader), command-line tool
 viewer/         Qt 6 viewer (CMake)
 winview/        Windows viewer (Win32 API, MinGW-w64; built into winview/build)
+examples/       example pictures as BMP, PNG, (JPG,) PIX algorithm 1 and 2, with sizes
 build/          object files of the command-line tool (made by make)
 ```
 
 ## License
 
 PIX is released under the BSD 2-clause license, see [`LICENSE`](LICENSE): you may use, change and redistribute it freely, also in closed-source products, as long as the copyright notice and the license text are kept with the source code and reproduced in the documentation of binary distributions.
+
+The pictures in [`examples/`](examples/) are not covered by this license; their sources and licenses, including the xkcd comics by Randall Munroe (CC BY-NC 2.5), are listed in [`examples/README.md`](examples/README.md).
