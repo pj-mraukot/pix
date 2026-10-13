@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PIX Image Format</title>
+<style>
+:root {
+  --bg: #fbfaf7;
+  --panel: #ffffff;
+  --text: #1d1f23;
+  --muted: #5d636e;
+  --line: #e1ddd3;
+  --accent: #1f5fbf;
+  --accent-soft: #e6eefb;
+  --code-bg: #f3f1ec;
+  --a1: #1d7a4d;
+  --a1-soft: #e3f3ea;
+  --a2: #8a3fb8;
+  --a2-soft: #f2e8f8;
+  --warn-soft: #fff4d6;
+  --warn-line: #e9c35a;
+  --k-run: #2f7fd0;
+  --k-hist: #1d7a4d;
+  --k-cache: #b07a00;
+  --k-lit: #c0392b;
+  --k-res: #7b4bb3;
+  --k-med: #0f8a8a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171b;
+    --panel: #1c1f24;
+    --text: #e4e6ea;
+    --muted: #9aa1ad;
+    --line: #2e333b;
+    --accent: #7aa7ff;
+    --accent-soft: #1f2a3d;
+    --code-bg: #23272e;
+    --a1: #6fd3a0;
+    --a1-soft: #1b2d24;
+    --a2: #d3a2f2;
+    --a2-soft: #2b2034;
+    --warn-soft: #2f2a19;
+    --warn-line: #8a7230;
+    --k-run: #6fa8e8;
+    --k-hist: #6fd3a0;
+    --k-cache: #e2b84a;
+    --k-lit: #f08070;
+    --k-res: #b897e6;
+    --k-med: #5fd0d0;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171b;
+  --panel: #1c1f24;
+  --text: #e4e6ea;
+  --muted: #9aa1ad;
+  --line: #2e333b;
+  --accent: #7aa7ff;
+  --accent-soft: #1f2a3d;
+  --code-bg: #23272e;
+  --a1: #6fd3a0;
+  --a1-soft: #1b2d24;
+  --a2: #d3a2f2;
+  --a2-soft: #2b2034;
+  --warn-soft: #2f2a19;
+  --warn-line: #8a7230;
+  --k-run: #6fa8e8;
+  --k-hist: #6fd3a0;
+  --k-cache: #e2b84a;
+  --k-lit: #f08070;
+  --k-res: #b897e6;
+  --k-med: #5fd0d0;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+code, pre, .mono { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: 0.9em; }
+code { background: var(--code-bg); padding: 0.1em 0.35em; border-radius: 4px; }
+pre { background: var(--code-bg); padding: 14px 16px; border-radius: 8px; overflow-x: auto; line-height: 1.45; }
+pre code { background: none; padding: 0; }
+a { color: var(--accent); }
+.layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); max-width: 1180px; margin: 0 auto; }
+nav.toc {
+  position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
+  padding: 28px 18px; border-right: 1px solid var(--line); font-size: 14px;
+}
+nav.toc h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 10px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; }
+nav.toc li { margin: 2px 0; }
+nav.toc li.sub a { padding-left: 22px; font-size: 13px; color: var(--muted); }
+nav.toc a { color: var(--text); text-decoration: none; display: block; padding: 3px 8px; border-radius: 6px; }
+nav.toc a:hover { background: var(--accent-soft); color: var(--accent); }
+main { padding: 32px 40px 80px; min-width: 0; }
+h1 { font-size: 2em; margin: 0 0 6px; line-height: 1.2; }
+h2 { font-size: 1.5em; margin: 2.2em 0 0.6em; padding-top: 0.4em; border-top: 1px solid var(--line); }
+h3 { font-size: 1.15em; margin: 1.8em 0 0.5em; }
+.lede { color: var(--muted); font-size: 1.08em; margin: 0 0 1.5em; }
+.tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 10px; vertical-align: middle; }
+.tag.a1 { background: var(--a1-soft); color: var(--a1); }
+.tag.a2 { background: var(--a2-soft); color: var(--a2); }
+.table-wrap { overflow-x: auto; margin: 1em 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.93em; background: var(--panel); }
+th, td { text-align: left; padding: 7px 10px; border: 1px solid var(--line); vertical-align: top; }
+th { background: var(--code-bg); font-weight: 600; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.note { background: var(--warn-soft); border-left: 4px solid var(--warn-line); padding: 10px 14px; border-radius: 0 6px 6px 0; margin: 1em 0; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 1.2em 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; }
+.card h3 { margin-top: 0; }
+.card.a1 { border-top: 4px solid var(--a1); }
+.card.a2 { border-top: 4px solid var(--a2); }
+.card ul { padding-left: 1.2em; margin: 0.4em 0 0; }
+
+/* header bytes */
+.bytes { display: flex; flex-wrap: wrap; gap: 4px; margin: 1em 0; }
+.field { border: 1px solid var(--line); border-radius: 6px; background: var(--panel); overflow: hidden; text-align: center; }
+.field .hex { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 14px; padding: 6px 8px; background: var(--code-bg); letter-spacing: 0.04em; }
+.field .what { font-size: 12px; padding: 3px 8px; color: var(--muted); }
+
+/* pipeline */
+.flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 1em 0; }
+.flow .step { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font-size: 14px; }
+.flow .arrow { color: var(--muted); }
+
+/* example image */
+.pixgrid { display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); max-width: 640px; border: 1px solid var(--line); margin: 1em 0 0.4em; }
+.pixgrid .px {
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  font: 600 11px/1 ui-monospace, Menlo, Consolas, monospace; color: #1d1f23;
+  border-left: 3px solid transparent; min-width: 0; overflow: hidden;
+}
+.pixgrid .px.dark { color: #ffffff; }
+.pixgrid .px.first.k-run { border-left-color: var(--k-run); }
+.pixgrid .px.first.k-hist { border-left-color: var(--k-hist); }
+.pixgrid .px.first.k-cache { border-left-color: var(--k-cache); }
+.pixgrid .px.first.k-lit { border-left-color: var(--k-lit); }
+.pixgrid .px.first.k-res { border-left-color: var(--k-res); }
+.pixgrid .px.first.k-med { border-left-color: var(--k-med); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); margin-bottom: 1em; }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
+@media (max-width: 560px) { .pixgrid .px { font-size: 7px; } }
+
+/* neighbourhood */
+.hood { display: grid; grid-template-columns: repeat(5, 58px); gap: 4px; margin: 1em 0; }
+.hood span { height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 6px; font: 600 13px ui-monospace, Menlo, Consolas, monospace; background: var(--code-bg); border: 1px solid var(--line); }
+.hood .cur { background: var(--a2-soft); color: var(--a2); border-color: var(--a2); }
+.hood .empty { background: none; border: 1px dashed var(--line); color: var(--muted); font-weight: 400; }
+
+/* decision tree */
+.tree { border-left: 2px solid var(--a2); padding-left: 14px; margin: 1em 0; }
+.tree .tree { margin: 0.4em 0 0.4em 6px; border-left-color: var(--line); }
+.tree p { margin: 0.35em 0; }
+
+@media (max-width: 860px) {
+  .layout { display: block; }
+  nav.toc { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 16px; }
+  main { padding: 20px 16px 60px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="toc" aria-label="Contents">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#file">File layout</a></li>
+    <li><a href="#a1">Algorithm 1</a></li>
+    <li class="sub"><a href="#a1-blocks">Blocks and padding</a></li>
+    <li class="sub"><a href="#a1-state">Coder state</a></li>
+    <li class="sub"><a href="#a1-codes">Code table</a></li>
+    <li class="sub"><a href="#a1-med">Prediction and residuals</a></li>
+    <li class="sub"><a href="#a1-caches">The two caches</a></li>
+    <li class="sub"><a href="#a1-encoder">Encoder choices</a></li>
+    <li class="sub"><a href="#a1-example">Worked example</a></li>
+    <li><a href="#a2">Algorithm 2</a></li>
+    <li class="sub"><a href="#a2-pixel">One pixel</a></li>
+    <li class="sub"><a href="#a2-coder">Arithmetic coder</a></li>
+    <li class="sub"><a href="#a2-numbers">Coding numbers</a></li>
+    <li class="sub"><a href="#a2-predict">Channel prediction</a></li>
+    <li class="sub"><a href="#a2-candidates">Colour candidates</a></li>
+    <li class="sub"><a href="#a2-mode">Coding mode</a></li>
+    <li class="sub"><a href="#a2-encoder">Encoder choices</a></li>
+    <li class="sub"><a href="#a2-why">Design measurements</a></li>
+    <li><a href="#compare">Comparison</a></li>
+  </ol>
+</nav>
+<main>
+
+<h1>The PIX image format</h1>
+<p class="lede">A lossless format for 24-bit RGB images, with two compression algorithms that share a single file header.</p>
+
+<h2 id="overview">Overview</h2>
+<p>A PIX file holds one image of 8-bit R, G and B samples, with no alpha channel. The viewer and the command-line tool put an image with transparency on a white background before encoding it. The image is compressed with one of two algorithms, which the header names. A decoder reads both.</p>
+
+<div class="cards">
+  <div class="card a1">
+    <h3>Algorithm 1 <span class="tag a1">A1</span></h3>
+    <p>Nibble codes, then zlib.</p>
+    <ul>
+      <li>16×16 blocks, each with its own cache of 80 colours; a global cache holds 8192 more</li>
+      <li>Each pixel gets the shortest code that fits: a repeat, a run, the pixel above, a cache slot, a MED residual or a literal colour</li>
+      <li>The nibble stream is deflated with zlib</li>
+      <li>Fast: a 1280×960 photo encodes in about 0.35 s and decodes in 0.06 s</li>
+    </ul>
+  </div>
+  <div class="card a2">
+    <h3>Algorithm 2 <span class="tag a2">A2</span></h3>
+    <p>Prediction and adaptive binary arithmetic coding.</p>
+    <ul>
+      <li>Pixels are coded row by row, with no blocks</li>
+      <li>Each pixel is one of up to 9 candidate colours, a colour from a list of 16384 recently used colours, or three residuals against a blended prediction</li>
+      <li>Every decision is a context-modelled bit, so a well-predicted pixel costs a fraction of a bit</li>
+      <li>About 27% smaller than algorithm 1, but takes about 1 µs per pixel each way</li>
+    </ul>
+  </div>
+</div>
+
+<p>The command-line tool <code>pix</code> encodes with algorithm 1 unless given <code>-a 2</code>. The viewer <code>pixview</code> saves with algorithm 2 by default. In the source, <code>src/pix_codec.cpp</code> implements the file format and algorithm 1, and <code>src/pix2_codec.cpp</code> implements algorithm 2. The design notes are <code>doc/design.txt</code> and <code>doc/design2.txt</code>.</p>
+
+<h2 id="file">File layout</h2>
+<p>Every file starts with a 20-byte header. All numbers are little-endian.</p>
+
+<div class="table-wrap"><table>
+  <tr><th class="num">Offset</th><th class="num">Size</th><th>Field</th><th>Meaning</th></tr>
+  <tr><td class="num">0</td><td class="num">4</td><td>magic</td><td><code>'P' 'I' 'X' 0</code></td></tr>
+  <tr><td class="num">4</td><td class="num">2</td><td>algorithm</td><td>ASCII text, so a hex dump shows it: <code>"A1"</code> or <code>"A2"</code>. Any other value is rejected.</td></tr>
+  <tr><td class="num">6</td><td class="num">3</td><td>width</td><td>Original image width, 1 to 16,777,215</td></tr>
+  <tr><td class="num">9</td><td class="num">3</td><td>height</td><td>Original image height, 1 to 16,777,215</td></tr>
+  <tr><td class="num">12</td><td class="num">4</td><td>packedSize</td><td>Size of the data after the header. The file must be exactly <code>20 + packedSize</code> bytes long.</td></tr>
+  <tr><td class="num">16</td><td class="num">4</td><td>unpackedSize</td><td>A1: size of the uncompressed nibble stream in bytes. A2: <code>width × height × 3</code>.</td></tr>
+  <tr><td class="num">20</td><td class="num">…</td><td>data</td><td>A1: the nibble stream compressed with zlib. A2: range coder output followed by a CRC-32.</td></tr>
+</table></div>
+
+<p>This is the header of the 16×4 example image used <a href="#a1-example">below</a>, encoded with algorithm 1:</p>
+<div class="bytes" aria-label="Header bytes of the example file">
+  <div class="field"><div class="hex">50 49 58 00</div><div class="what">"PIX" 0</div></div>
+  <div class="field"><div class="hex">41 31</div><div class="what">"A1"</div></div>
+  <div class="field"><div class="hex">10 00 00</div><div class="what">width 16</div></div>
+  <div class="field"><div class="hex">04 00 00</div><div class="what">height 4</div></div>
+  <div class="field"><div class="hex">2C 00 00 00</div><div class="what">44 bytes of zlib data</div></div>
+  <div class="field"><div class="hex">3C 00 00 00</div><div class="what">60-byte nibble stream</div></div>
+</div>
+<p>The same image with algorithm 2 starts <code>50 49 58 00 41 32 10 00 00 04 00 00 43 00 00 00 C0 00 00 00</code>: "A2", 67 bytes of data, and an unpacked size of 192 = 16 × 4 × 3.</p>
+
+<p>The decoder also refuses files whose width × height exceeds 2<sup>28</sup> pixels, so a tiny file can't claim to be an enormous image.</p>
+
+<!-- ================================================================== -->
+<h2 id="a1">Algorithm 1: nibble codes and zlib <span class="tag a1">A1</span></h2>
+
+<div class="flow" aria-label="Algorithm 1 pipeline">
+  <span class="step">RGB image</span><span class="arrow">→</span>
+  <span class="step">pad to whole 16×16 blocks</span><span class="arrow">→</span>
+  <span class="step">one nibble code per pixel or run</span><span class="arrow">→</span>
+  <span class="step">pack 2 nibbles per byte</span><span class="arrow">→</span>
+  <span class="step">zlib (level 9)</span>
+</div>
+
+<p>The encoder writes the image as a stream of 4-bit <em>nibbles</em>. Each pixel, or each run of pixels, becomes one code of 1 to 7 nibbles. The encoder always picks a short code that describes the pixel exactly. zlib then removes much of the repetition that remains in the stream.</p>
+<ul>
+  <li>Nibbles are packed high nibble first. If the count is odd, the last byte is padded with a 0 nibble.</li>
+  <li>Numbers made of several nibbles (<code>XX</code>, <code>XXX</code>, <code>RRGGBB</code>, a cache distance) are stored most significant nibble first.</li>
+  <li>The stream ends with <code>00</code> after the last block.</li>
+</ul>
+
+<h3 id="a1-blocks">Blocks, pixel order and padding</h3>
+<p>The image is processed in 16×16 blocks. Blocks go left to right, top to bottom, and the pixels in each block go row by row, left to right:</p>
+<pre><code>for (Y = 0; Y &lt; paddedHeight; Y += 16)
+    for (X = 0; X &lt; paddedWidth; X += 16)
+        processBlock(X, Y);       // 256 pixels, row by row</code></pre>
+<p>If the width or height isn't a multiple of 16, the encoder pads the image to whole blocks. Each row's last pixel is repeated to the right, and the last row is repeated downwards. The padding is coded like any other pixels. The header keeps the original size, so the decoder decodes the padded image and keeps only the original area. Repeating edge pixels gave files 0.1% smaller than black padding.</p>
+<p>Blocks only decide which cache1 is in use and where runs may end. A run never crosses a block boundary. Prediction, the pixel above and the colour history all work across block boundaries.</p>
+
+<h3 id="a1-state">Coder state</h3>
+<p>The encoder and decoder keep the same state and update it the same way after every code.</p>
+<div class="table-wrap"><table>
+  <tr><th>State</th><th>Scope</th><th>Contents</th></tr>
+  <tr><td>last, nextToLast</td><td>whole image</td><td>The two most recent distinct colours, both black at the start. Placing colour c with any code does <code>if (c != last) { nextToLast = last; last = c; }</code>. So codes <code>1</code> and the runs leave the history unchanged, and code <code>2</code> swaps the two.</td></tr>
+  <tr><td>cache1</td><td>one per block</td><td>80 slots, each holding a colour and a frequency (freq), plus a slotIndex that chooses where the next insertion goes.</td></tr>
+  <tr><td>cache2</td><td>whole image</td><td>8192 colour slots, filled round robin.</td></tr>
+  <tr><td>final cache1s</td><td>last 4096 blocks</td><td>Each block's cache1 as it was at the block's end. A new block may start from a copy of one of them.</td></tr>
+</table></div>
+
+<h3 id="a1-codes">Code table</h3>
+<p>The first nibble selects the code. Code <code>0</code> is an escape: the second nibble selects an extension code.</p>
+<div class="table-wrap"><table>
+  <tr><th>Nibbles</th><th class="num">Length</th><th>Places</th></tr>
+  <tr><td><code>1</code></td><td class="num">1</td><td>One pixel of the last colour</td></tr>
+  <tr><td><code>2</code></td><td class="num">1</td><td>One pixel of the next-to-last colour (this swaps the history)</td></tr>
+  <tr><td><code>3 X</code></td><td class="num">2</td><td>X + 3 pixels of the last colour (3–18)</td></tr>
+  <tr><td><code>4 XX</code></td><td class="num">3</td><td>XX + 19 pixels of the last colour (19–274)</td></tr>
+  <tr><td><code>5 X</code> … <code>9 X</code></td><td class="num">2</td><td>cache1 slot <code>(first − 5) × 16 + X</code>, i.e. slots 0–79</td></tr>
+  <tr><td><code>A XXX</code></td><td class="num">4</td><td>cache2 slot XXX (0–4095)</td></tr>
+  <tr><td><code>B XXX</code></td><td class="num">4</td><td>cache2 slot 4096 + XXX (4096–8191)</td></tr>
+  <tr><td><code>C RRGGBB</code></td><td class="num">7</td><td>Literal colour, inserted into cache1</td></tr>
+  <tr><td><code>D G R B</code></td><td class="num">4</td><td>MED prediction + residual: three signed nibbles, each −8..7</td></tr>
+  <tr><td><code>E RRGGBB</code></td><td class="num">7</td><td>Literal colour, inserted into cache2</td></tr>
+  <tr><td><code>F</code></td><td class="num">1</td><td>The colour of the pixel above, which is invalid in the top row of the image</td></tr>
+  <tr><th colspan="3">Extension codes (first nibble 0)</th></tr>
+  <tr><td><code>00</code></td><td class="num">2</td><td>End of stream, after the last block only</td></tr>
+  <tr><td><code>01 L D…</code></td><td class="num">3–6</td><td>Start the block from an earlier block's cache1: L = 1..4 nibbles of distance D follow. Valid only as a block's first code.</td></tr>
+  <tr><td><code>02</code></td><td class="num">2</td><td>One pixel equal to its MED prediction</td></tr>
+  <tr><td><code>03 N</code></td><td class="num">3</td><td>N + 2 pixels (2–17), each equal to its own prediction</td></tr>
+  <tr><td><code>0E NN</code></td><td class="num">4</td><td>NN + 18 pixels (18–273), each equal to its own prediction</td></tr>
+  <tr><td><code>04</code> … <code>07</code> <code>n</code></td><td class="num">3</td><td>Small residual: each of dG, dR, dB in −2..1</td></tr>
+  <tr><td><code>08</code> <code>09</code> <code>nnn</code></td><td class="num">5</td><td>Medium residual: dG −16..15, dR and dB −8..7</td></tr>
+  <tr><td><code>0A</code> … <code>0D</code> <code>nnnn</code></td><td class="num">6</td><td>Wide residual: any dG, dR and dB −16..15</td></tr>
+  <tr><td><code>0F</code></td><td class="num">–</td><td>Reserved</td></tr>
+</table></div>
+<p>A prediction run predicts each pixel only after the previous one has been placed. In a flat area, or along a straight vertical edge, one <code>0E NN</code> code can therefore place hundreds of pixels.</p>
+
+<h3 id="a1-med">Prediction and residuals</h3>
+<p>The predicted colour P uses the MED predictor from JPEG-LS, applied to each channel separately. Its inputs are the already decoded pixels to the left (a), above (b) and above-left (c):</p>
+<pre><code>if (c &gt;= max(a, b))      P = min(a, b);    // an edge above or to the left
+else if (c &lt;= min(a, b)) P = max(a, b);
+else                     P = a + b - c;    // a smooth gradient</code></pre>
+<p>At the image edges: pixel (0,0) is predicted as black, the rest of the top row as the left pixel, and the rest of the left column as the pixel above.</p>
+<p>Residuals are taken after a green transform, because the differences of R and B usually follow the difference of G. All arithmetic is modulo 256, with values wrapped to −128..127:</p>
+<pre><code>encode:  dG = G − P.g        dR = (R − P.r) − dG        dB = (B − P.b) − dG
+decode:  g = P.g + dG        r = P.r + dG + dR          b = P.b + dG + dB      (each &amp; 255)</code></pre>
+<p>A uniform brightness change, such as a grey gradient, gives dR = dB = 0. The residual codes pack the three values as follows:</p>
+<div class="table-wrap"><table>
+  <tr><th>Code</th><th>Value v</th><th>Unpacking</th></tr>
+  <tr><td><code>0X n</code>, X = 4..7</td><td>6 bits: <code>(X−4)&lt;&lt;4 | n</code></td><td><code>dG = (v&gt;&gt;4) − 2</code>, <code>dR = ((v&gt;&gt;2)&amp;3) − 2</code>, <code>dB = (v&amp;3) − 2</code></td></tr>
+  <tr><td><code>D G R B</code></td><td>three nibbles</td><td>Each nibble is a signed two's-complement value, −8..7</td></tr>
+  <tr><td><code>0X nnn</code>, X = 8..9</td><td>13 bits: <code>(X−8)&lt;&lt;12 | nnn</code></td><td><code>dG = (v&gt;&gt;8) − 16</code>, <code>dR = ((v&gt;&gt;4)&amp;15) − 8</code>, <code>dB = (v&amp;15) − 8</code></td></tr>
+  <tr><td><code>0X nnnn</code>, X = A..D</td><td>18 bits: <code>(X−A)&lt;&lt;16 | nnnn</code></td><td><code>dG = v&gt;&gt;10</code> (taken mod 256), <code>dR = ((v&gt;&gt;5)&amp;31) − 16</code>, <code>dB = (v&amp;31) − 16</code></td></tr>
+</table></div>
+<p>The residual and prediction codes update the colour history like any other code: a run updates it once for each pixel it places. They never change cache1 frequencies.</p>
+
+<h3 id="a1-caches">The two caches</h3>
+<h4>cache1: 80 colours per block</h4>
+<ul>
+  <li><strong>Lookup</strong> (codes <code>5X</code>–<code>9X</code>): adds 1 to the slot's frequency. Codes <code>1</code> and <code>2</code> also add 1 when their colour is in cache1, and runs <code>3X</code>/<code>4XX</code> add the whole run length. Codes A, B, E, F and the residual codes never change frequencies.</li>
+  <li><strong>Insertion</strong> (code <code>C</code>):
+    <ol>
+      <li>Search slots slotIndex..79 for the smallest frequency. An unused slot counts as smaller than any frequency, and a tie goes to the lowest slot.</li>
+      <li>If that slot is used, its colour moves to cache2, unless cache2 already has it.</li>
+      <li>Write the new colour with freq = 1, then set <code>slotIndex = (slotIndex + 1) % 80</code>. Starting the search at slotIndex keeps the low slots from being overwritten again and again.</li>
+    </ol>
+  </li>
+  <li><strong>Block start</strong>: the encoder scores the final cache1 of each of the previous 4096 blocks by how many of its colours appear in the new block. It picks the best score above 0, and the nearest block on a tie. It then writes <code>01 L DIST</code>, where DIST = 0 means the previous block, and uses the minimal L. The copy's frequencies are divided by 4 and its slotIndex is reset to 0; slots whose frequency drops to 0 stay in use. If no block is selected, there is no instruction and the block starts with an empty cache1.</li>
+</ul>
+<h4>cache2: 8192 colours for the whole image</h4>
+<p>Code <code>E</code> and colours pushed out of cache1 are written at cache2's slotIndex, which then advances by one modulo 8192. Codes <code>A XXX</code> and <code>B XXX</code> read a slot.</p>
+
+<h3 id="a1-encoder">Encoder choices</h3>
+<p>These rules are not part of the format, and a different encoder could choose differently. They decide only how well the image compresses. For each position in a block:</p>
+<ol>
+  <li>If the colour is the last colour, use a run of it (<code>1</code>, <code>3X</code>, <code>4XX</code>). But if a prediction run of at least 2 pixels is longer, use that (<code>03 N</code>, <code>0E NN</code>).</li>
+  <li>Otherwise, code a single pixel with the first of these that fits:
+    <ol>
+      <li>next-to-last colour: <code>2</code></li>
+      <li>same as the pixel above: <code>F</code></li>
+      <li>exact prediction: <code>02</code></li>
+      <li>in cache1: <code>5X</code>…<code>9X</code></li>
+      <li>the shortest residual code that fits: <code>04</code>–<code>07</code>, <code>D</code>, <code>08</code>/<code>09</code> or <code>0A</code>–<code>0D</code>; cache2 is used instead of the 5- and 6-nibble residual codes</li>
+      <li>in cache2: <code>A</code>, <code>B</code></li>
+      <li>a literal: <code>C</code> if the colour appears at least 3 times in the rest of the block, otherwise <code>E</code></li>
+    </ol>
+  </li>
+</ol>
+<p>Residual codes come before the caches because they compress much better under zlib. Neighbouring residuals are often alike, so zlib finds repeated byte patterns in them. The single-nibble <code>F</code> code replaced an earlier uncached literal, and made files 2.5% smaller.</p>
+
+<h3 id="a1-example">Worked example</h3>
+<p>The 16×4 image below has a white row, a blue bar, a grey-blue gradient and the bar again. Each pixel is labelled with the code that places it. A coloured left edge marks the first pixel of each code; unlabelled pixels belong to the code on their left. Hover over a pixel to see its coordinates and colour.</p>
+<div class="pixgrid" role="img" aria-label="The 16 by 4 example image, each pixel labelled with the code that places it">
+<span class="px k-res first" style="background:#FFFFFF" title="(0,0) #FFFFFF">05A</span>
+<span class="px k-run first" style="background:#FFFFFF" title="(1,0) #FFFFFF">3F</span>
+<span class="px k-run" style="background:#FFFFFF" title="(2,0) #FFFFFF"></span>
+<span class="px k-run" style="background:#FFFFFF" title="(3,0) #FFFFFF"></span>
+<span class="px k-run" style="background:#FFFFFF" title="(4,0) #FFFFFF"></span>
+<span class="px k-run" style="background:#FFFFFF" title="(5,0) #FFFFFF"></span>
+<span class="px k-run" style="background:#FFFFFF" title="(6,0) #FFFFFF"></span>
+<span class="px k-run" style="background:#FFFFFF" title="(7,0) #FFFFFF"></span>
+<span class="px k-run" style="background:#FFFFFF" title="(8,0) #FFFFFF"></span>
+<span class="px k-run" style="background:#FFFFFF" title="(9,0) #FFFFFF"></span>
+<span class="px k-run" style="background:#FFFFFF" title="(10,0) #FFFFFF"></span>
+<span class="px k-run" style="background:#FFFFFF" title="(11,0) #FFFFFF"></span>
+<span class="px k-run" style="background:#FFFFFF" title="(12,0) #FFFFFF"></span>
+<span class="px k-run" style="background:#FFFFFF" title="(13,0) #FFFFFF"></span>
+<span class="px k-run" style="background:#FFFFFF" title="(14,0) #FFFFFF"></span>
+<span class="px k-run" style="background:#FFFFFF" title="(15,0) #FFFFFF"></span>
+<span class="px k-run" style="background:#FFFFFF" title="(0,1) #FFFFFF"></span>
+<span class="px k-run" style="background:#FFFFFF" title="(1,1) #FFFFFF"></span>
+<span class="px k-run" style="background:#FFFFFF" title="(2,1) #FFFFFF"></span>
+<span class="px k-lit first dark" style="background:#4A90D9" title="(3,1) #4A90D9">C…</span>
+<span class="px k-run first dark" style="background:#4A90D9" title="(4,1) #4A90D9">35</span>
+<span class="px k-run dark" style="background:#4A90D9" title="(5,1) #4A90D9"></span>
+<span class="px k-run dark" style="background:#4A90D9" title="(6,1) #4A90D9"></span>
+<span class="px k-run dark" style="background:#4A90D9" title="(7,1) #4A90D9"></span>
+<span class="px k-run dark" style="background:#4A90D9" title="(8,1) #4A90D9"></span>
+<span class="px k-run dark" style="background:#4A90D9" title="(9,1) #4A90D9"></span>
+<span class="px k-run dark" style="background:#4A90D9" title="(10,1) #4A90D9"></span>
+<span class="px k-run dark" style="background:#4A90D9" title="(11,1) #4A90D9"></span>
+<span class="px k-hist first" style="background:#FFFFFF" title="(12,1) #FFFFFF">2</span>
+<span class="px k-run first" style="background:#FFFFFF" title="(13,1) #FFFFFF">30</span>
+<span class="px k-run" style="background:#FFFFFF" title="(14,1) #FFFFFF"></span>
+<span class="px k-run" style="background:#FFFFFF" title="(15,1) #FFFFFF"></span>
+<span class="px k-res first dark" style="background:#0A141E" title="(0,2) #0A141E">0A…</span>
+<span class="px k-res first dark" style="background:#121C26" title="(1,2) #121C26">09…</span>
+<span class="px k-res first dark" style="background:#1A242E" title="(2,2) #1A242E">09…</span>
+<span class="px k-res first dark" style="background:#222C36" title="(3,2) #222C36">09…</span>
+<span class="px k-res first dark" style="background:#2A343E" title="(4,2) #2A343E">09…</span>
+<span class="px k-res first dark" style="background:#323C46" title="(5,2) #323C46">09…</span>
+<span class="px k-res first dark" style="background:#3A444E" title="(6,2) #3A444E">09…</span>
+<span class="px k-res first dark" style="background:#424C56" title="(7,2) #424C56">09…</span>
+<span class="px k-res first dark" style="background:#4A545E" title="(8,2) #4A545E">09…</span>
+<span class="px k-res first dark" style="background:#525C66" title="(9,2) #525C66">09…</span>
+<span class="px k-res first dark" style="background:#5A646E" title="(10,2) #5A646E">09…</span>
+<span class="px k-res first dark" style="background:#626C76" title="(11,2) #626C76">09…</span>
+<span class="px k-lit first dark" style="background:#6A747E" title="(12,2) #6A747E">E…</span>
+<span class="px k-res first dark" style="background:#727C86" title="(13,2) #727C86">09…</span>
+<span class="px k-res first dark" style="background:#7A848E" title="(14,2) #7A848E">09…</span>
+<span class="px k-res first dark" style="background:#828C96" title="(15,2) #828C96">09…</span>
+<span class="px k-res first" style="background:#FFFFFF" title="(0,3) #FFFFFF">0D…</span>
+<span class="px k-hist first" style="background:#FFFFFF" title="(1,3) #FFFFFF">1</span>
+<span class="px k-hist first" style="background:#FFFFFF" title="(2,3) #FFFFFF">1</span>
+<span class="px k-cache first dark" style="background:#4A90D9" title="(3,3) #4A90D9">50</span>
+<span class="px k-run first dark" style="background:#4A90D9" title="(4,3) #4A90D9">35</span>
+<span class="px k-run dark" style="background:#4A90D9" title="(5,3) #4A90D9"></span>
+<span class="px k-run dark" style="background:#4A90D9" title="(6,3) #4A90D9"></span>
+<span class="px k-run dark" style="background:#4A90D9" title="(7,3) #4A90D9"></span>
+<span class="px k-run dark" style="background:#4A90D9" title="(8,3) #4A90D9"></span>
+<span class="px k-run dark" style="background:#4A90D9" title="(9,3) #4A90D9"></span>
+<span class="px k-run dark" style="background:#4A90D9" title="(10,3) #4A90D9"></span>
+<span class="px k-run dark" style="background:#4A90D9" title="(11,3) #4A90D9"></span>
+<span class="px k-hist first" style="background:#FFFFFF" title="(12,3) #FFFFFF">2</span>
+<span class="px k-med first" style="background:#FFFFFF" title="(13,3) #FFFFFF">0EB1</span>
+<span class="px k-med" style="background:#FFFFFF" title="(14,3) #FFFFFF"></span>
+<span class="px k-med" style="background:#FFFFFF" title="(15,3) #FFFFFF"></span>
+</div>
+<div class="legend">
+  <span style="--c: var(--k-run)">run of last colour</span>
+  <span style="--c: var(--k-hist)">last / next-to-last</span>
+  <span style="--c: var(--k-cache)">cache1</span>
+  <span style="--c: var(--k-lit)">literal colour</span>
+  <span style="--c: var(--k-res)">MED residual</span>
+  <span style="--c: var(--k-med)">prediction run</span>
+</div>
+<p>The image is padded to 16×16. The rows below it repeat the last row, and the final <code>0E B1</code> run places those 195 pixels too. This is the listing from <code>pix r</code>, shortened:</p>
+<pre><code>addr  nibbles   code    pixel(s)            colour   explanation
+0000  05 A      SMALL   (0,0)               #FFFFFF  pred #000000, dG=-1 dR=0 dB=0
+0003  3 F       RUN     (1,0)-(2,1) x18     #FFFFFF  last colour 18 times
+0005  C 4A90D9  NEW     (3,1)               #4A90D9  -&gt; cache1 slot 0 (126 more in block)
+000C  3 5       RUN     (4,1)-(11,1) x8     #4A90D9  cache1 slot 0 freq 1 -&gt; 9
+000E  2         NEXT    (12,1)              #FFFFFF  next-to-last colour, swaps history
+000F  3 0       RUN     (13,1)-(15,1) x3    #FFFFFF
+0011  0A 54DA   WIDE    (0,2)               #0A141E  pred #FFFFFF, dG=+21 dR=-10 dB=+10
+0017  09 888    MEDIUM  (1,2)               #121C26  pred #0A141E, dG=+8 dR=0 dB=0
+ ...  09 888    MEDIUM  (2,2) ... (11,2)             the same code for every gradient step
+004E  E 6A747E  NEW     (12,2)              #6A747E  -&gt; cache2 slot 0; MED predicts #FFDB9C here
+0055  09 888    MEDIUM  (13,2) ... (15,2)
+0064  0D AF46   WIDE    (0,3)               #FFFFFF  pred #0A141E, dG=-21 dR=+10 dB=-10
+006A  1         LAST    (1,3)               #FFFFFF
+006B  1         LAST    (2,3)               #FFFFFF
+006C  5 0       C1      (3,3)               #4A90D9  cache1 slot 0, freq 9 -&gt; 10
+006E  3 5       RUN     (4,3)-(11,3) x8     #4A90D9
+0070  2         NEXT    (12,3)              #FFFFFF
+0071  0E B1     MEDRUN  (13,3)-(15,15) x195 #FFFFFF  each pixel = its own MED prediction
+0075  00        END</code></pre>
+<p>Some things to notice:</p>
+<ul>
+  <li>At (12,2) the white pixel above and the blue pixel above-left push the MED prediction to #FFDB9C. That is too far from the real colour for any residual code, so the colour is written as a literal.</li>
+  <li>The gradient gives the same <code>09 888</code> code eleven times, a repetition that zlib compresses well.</li>
+  <li>The 256 padded pixels take 119 nibbles (60 bytes). After zlib, the whole file is 64 bytes, a third of the 192 bytes of raw RGB.</li>
+</ul>
+<p>The raw nibble stream, two nibbles per byte:</p>
+<pre><code>05 a3 fc 4a 90 d9 35 23 00 a5 4d a0 98 88 09 88 80 98 88 ... e6 a7 47 e0 98 88 ... 0d af 46 11 50 35 20 eb 10 00</code></pre>
+
+<h3>Decoding</h3>
+<pre><code>for each block (left to right, top to bottom):
+    if the next nibbles are 0 1:  read L, read L nibbles of DIST
+                                  cache1 = copy of finalCache[block - 1 - DIST], freq /= 4, slotIndex = 0
+    else                          cache1 = empty
+    i = 0
+    while i &lt; 256:
+        read one code, which gives a colour c and a count n (1 for single pixels)
+        a run must not cross the block's end (i + n &lt;= 256)
+        place n pixels; a prediction run predicts each pixel after placing the previous one
+        update last / nextToLast, cache1 frequencies and the caches as described above
+    finalCache[block] = cache1
+read 00
+crop the padded image to width × height</code></pre>
+<p>The decoder rejects these as a damaged stream, not as a crash: an empty cache slot, <code>F</code> in the top row, a run past the block's end, an unknown code, an impossible cache distance, or reading past the stream's end.</p>
+
+<!-- ================================================================== -->
+<h2 id="a2">Algorithm 2: prediction and arithmetic coding <span class="tag a2">A2</span></h2>
+<p>Algorithm 1 leaves part of the work to zlib, which knows nothing about images. Algorithm 2 models the image directly. Every decision is a binary event coded by an adaptive binary range coder, with probabilities chosen by the pixel's surroundings. A pixel the model expects costs well under one bit.</p>
+<p>The encoder and decoder run the same code (class <code>Pix2Coder</code>). When encoding, each call writes a bit; when decoding, the same call reads it. All arithmetic the decoder depends on is integer, so a file decodes the same on every platform.</p>
+
+<h3>Data</h3>
+<p>After the 20-byte header (algorithm <code>"A2"</code>, unpacked size width × height × 3) come:</p>
+<ul>
+  <li>the range coder's output;</li>
+  <li>a CRC-32 (zlib's <code>crc32</code>, 4 bytes, little-endian) of the decoded RGB bytes: rows top-down, R G B for each pixel. If it doesn't match, the decoder reports a damaged file.</li>
+</ul>
+<p>There are no blocks and no padding. Pixels are coded row by row, left to right.</p>
+
+<h3 id="a2-pixel">One pixel</h3>
+<p>The pixel's neighbours, as used throughout algorithm 2:</p>
+<div class="hood" aria-label="Neighbourhood of the current pixel X">
+  <span class="empty"></span><span class="empty"></span><span>NN</span><span class="empty"></span><span class="empty"></span>
+  <span class="empty"></span><span>NW</span><span>N</span><span>NE</span><span class="empty"></span>
+  <span>WW</span><span>W</span><span class="cur">X</span><span class="empty">later</span><span class="empty">later</span>
+</div>
+<ol>
+  <li><strong>Predict</strong> each channel, G first, from a blend of five predictors plus a bias correction.</li>
+  <li><strong>Code the mode</strong>, i.e. how the pixel is described:
+    <ul>
+      <li>as one of up to 9 <em>candidate</em> colours: the predicted colour, colours that followed the same neighbourhood before, or the colours of six neighbours;</li>
+      <li>as an index into the list of recently used colours;</li>
+      <li>as residuals of G, R and B against the prediction.</li>
+    </ul>
+  </li>
+  <li><strong>Learn</strong>: whichever way the pixel was coded, every model is updated with it: predictor errors, bias statistics, hash tables and the recent list.</li>
+</ol>
+
+<h3 id="a2-coder">Binary arithmetic coder</h3>
+<h4>Probability model (BitModel)</h4>
+<p>Each model holds the probability that the next bit is 1, as a 16-bit fixed-point value. It mixes a fast-adapting estimate with a slow one:</p>
+<pre><code>target = bit ? 65536 : 0
+fast  += (target − fast) &gt;&gt; 4
+slow  += (count &lt; 510) ? (target − slow) / (++count + 1)    // a plain average at first
+                       : (target − slow) &gt;&gt; 9
+p      = clamp((fast + slow) &gt;&gt; 1, 64, 65472)              // both start at 32768</code></pre>
+<p>The fast estimate follows local changes in the image. The slow one starts as the average of all bits seen so far, so a fresh model learns quickly, and later becomes a long-term average.</p>
+
+<h4>Range coder</h4>
+<p>The coder uses a 32-bit range with LZMA-style carry propagation. The encoder keeps 33 bits of low, a cache byte and a cacheSize.</p>
+<pre><code>bound = (range &gt;&gt; 16) × p
+bit 1:  range = bound                       (decoder: code &lt; bound)
+bit 0:  low += bound;  range −= bound
+while range &lt; 2^24:  shift one byte out,  range &lt;&lt;= 8</code></pre>
+<p>The decoder starts by reading 5 bytes into code, and reads past the end of the data give zero bytes. The encoder flushes with 5 byte shifts.</p>
+
+<h3 id="a2-numbers">Coding numbers</h3>
+<p>Numbers are coded bit by bit, each bit with its own model, in an Elias-gamma-like layout:</p>
+<div class="table-wrap"><table>
+  <tr><th>Model</th><th>Range</th><th>Bits</th></tr>
+  <tr><td>ResidualModel</td><td>−128..127</td><td>
+    <ol style="margin:0;padding-left:1.2em">
+      <li>zero flag (1 = zero; nothing follows)</li>
+      <li>sign (1 = negative)</li>
+      <li>n = |e| (1..128), with k = ⌊log₂ n⌋ coded in unary: bits <code>exp[i]</code> = 1 while i &lt; k, then a 0 (omitted after 7 ones)</li>
+      <li>the k bits of n below its top bit, high to low, each with model <code>mant[k][position]</code></li>
+    </ol></td></tr>
+  <tr><td>NumberModel</td><td>1..16384</td><td>The same without the zero flag and the sign; the exponent goes up to 14</td></tr>
+</table></div>
+<p>Small values, the common case, cost only a few well-predicted bits. Every mantissa bit has its own model, so the coder also learns the shape of the distribution.</p>
+
+<h3 id="a2-predict">Channel prediction</h3>
+<p>Each channel c (values 0..255) is predicted from that channel of W, N, NW and NE. Missing neighbours are filled in: at x = 0, W = N (or 0 for the first pixel); in the top row, N = W; a missing NW or NE becomes N.</p>
+<h4>Five predictors, weighted by how well each did nearby</h4>
+<div class="table-wrap"><table>
+  <tr><th class="num">#</th><th>Predictor</th><th>Good for</th></tr>
+  <tr><td class="num">0</td><td><code>W</code></td><td>horizontal structure</td></tr>
+  <tr><td class="num">1</td><td><code>N</code></td><td>vertical structure</td></tr>
+  <tr><td class="num">2</td><td><code>clamp(W + N − NW)</code></td><td>smooth gradients (a plane)</td></tr>
+  <tr><td class="num">3</td><td><code>clamp(W + NE − N)</code></td><td>diagonal edges</td></tr>
+  <tr><td class="num">4</td><td><code>(W + N + 1) &gt;&gt; 1</code></td><td>noise (averages it)</td></tr>
+</table></div>
+<p>The absolute error of every predictor is stored for every pixel. Predictor i's weight comes from its errors at the neighbouring pixels:</p>
+<pre><code>s_i      = 2·err_i(W) + 2·err_i(N) + err_i(NW) + err_i(NE) + 1      // 0 outside the image
+weight_i = 2^32 / s_i²                                              // integer, from a table
+spatial  = (Σ weight_i · pred_i + Σ weight_i / 2) / Σ weight_i</code></pre>
+<p>A predictor that was exact around the pixel dominates the blend; one that missed counts for very little. Weighting by 1/s² compressed better than 1/s or 1/s³.</p>
+
+<h4>G first, then R and B follow G</h4>
+<p>Channels are coded in the order G, R, B. After G is known, its prediction error eG = G − predG is added to the spatial prediction of R and of B. If the pixel is brighter than expected in G, it is probably brighter in R and B too:</p>
+<pre><code>G:      base = spatial
+R, B:   base = clamp(spatial + eG)</code></pre>
+
+<h4>Activity and bias correction</h4>
+<p>Activity measures how busy the neighbourhood is: a = the sum of |residual| at W, N, NW and NE for the channel. Its bucket (0..15) is the number of limits in {0, 1, 2, 3, 4, 6, 8, 11, 15, 20, 28, 40, 56, 80, 112} that a exceeds.</p>
+<p>Bias correction, as in JPEG-LS, removes systematic errors. The context is (channel, activity bucket, sign(W − NW), sign(N − NW)). It keeps a sum and a count of <code>value − base</code>, each sample clipped to −16..16; when the count reaches 64, both are halved (the sum rounded half away from zero). Then:</p>
+<pre><code>corr     = round(sum / count)            // 0 if count is 0
+pred     = clamp(base + corr)
+residual = (value − pred) wrapped to −128..127       decode: value = (pred + residual) &amp; 255</code></pre>
+<p>Clipping the samples matters: without it, a single sharp edge shifted the predictions of the flat areas around it, and UI images grew from 173% to 203% of algorithm 1 during development.</p>
+<p>Each residual is coded with a ResidualModel chosen by the channel, the activity bucket, and, for R and B, the size of eG: 0, 1, 2–3, 4–7 or 8+.</p>
+
+<h3 id="a2-candidates">Colour candidates</h3>
+<p>Text, icons and flat UI areas don't need residuals. Their pixels repeat colours seen nearby or earlier. Before any residual, the coder can name a whole colour from a short candidate list, built in this order. A candidate that is missing or equal to an earlier one is skipped, so the list holds up to 9 distinct colours:</p>
+<div class="table-wrap"><table>
+  <tr><th class="num">#</th><th>Candidate</th></tr>
+  <tr><td class="num">0</td><td>The predicted colour: the final predictions of R, G and B, with eG = 0</td></tr>
+  <tr><td class="num">1</td><td>The colour that followed the neighbourhood (W, N, NW, NE) last time, from a hash table of 2<sup>20</sup> entries</td></tr>
+  <tr><td class="num">2</td><td>The colour that followed the neighbourhood (W, N) last time, from a second table of 2<sup>20</sup> entries</td></tr>
+  <tr><td class="num">3–8</td><td>The colours of W, N, NE, NW, WW and NN (when missing: W = N or 0, N = W, NE and NW = N, WW = W, NN = N)</td></tr>
+</table></div>
+<pre><code>hash2 = ((W·0x9E3779B1) ^ (N·0x85EBCA77)) · 0xC2B2AE3D &gt;&gt; 12                                  (32-bit unsigned)
+hash4 = ((W·0x9E3779B1) ^ (N·0x85EBCA77) ^ (NW·0x27D4EB2F) ^ (NE·0x165667B1)) · 0xC2B2AE3D &gt;&gt; 12
+                                                         colours as 0xRRGGBB; after every pixel
+                                                         both tables store its colour at these hashes</code></pre>
+<p>The hash tables are what make repeated text cheap. When the same letter shape appears again, the same neighbourhoods recur, and each one remembers the colour that came next. They shrank the UI test images from 74% to 67% of algorithm 1.</p>
+
+<h4>Recent colours</h4>
+<p>The coder keeps a move-to-front list of up to 16384 distinct colours, most recently used first. After each pixel, its colour moves to the front; when the list is full, the least recently used colour drops off. Frequently used colours therefore keep small indexes, which cost few bits. One move-to-front list did better than a short recent list combined with a 4096-colour cache in insertion order.</p>
+
+<h3 id="a2-mode">Coding mode</h3>
+<p>Each pixel's mode is stored, because the mode of W and N is part of most contexts: 0 = predicted colour, 1 = other candidate, 2 = recent colour, 3 = residuals. A missing W or N counts as mode 3. The bits are coded in this order:</p>
+<div class="tree">
+  <p><strong>any</strong>: 1 = the colour is a candidate.<br><span class="mono" style="color:var(--muted)">context: G activity bucket; prediction equals W / N; W == N; N == NE; modes of W and N</span></p>
+  <div class="tree">
+    <p><strong>if 1</strong>: one flag per candidate in list order, 1 = "this one". The last candidate needs no flag.</p>
+    <p class="mono" style="color:var(--muted)">predicted colour context: G bucket; prediction equals W / N; modes of W and N<br>
+    other candidates: candidate number; which of W==N, W==NW, N==NE, N==NW, W==WW, N==NN hold; whether this candidate had the colour of pixel W / of pixel N; modes of W and N</p>
+  </div>
+  <div class="tree">
+    <p><strong>if 0</strong>: <strong>recent</strong> flag, 1 = the colour is in the recent list.<br><span class="mono" style="color:var(--muted)">context: G bucket; modes of W and N</span></p>
+    <div class="tree">
+      <p><strong>if 1</strong>: index + 1 as a NumberModel number; the model depends on W's mode. Candidates are skipped when counting, so index 0 is the most recently used colour that isn't a candidate.</p>
+      <p><strong>if 0</strong>: residuals of G, R and B.</p>
+    </div>
+  </div>
+</div>
+
+<h3 id="a2-encoder">Encoder choices</h3>
+<p>The encoder estimates the cost of each option in 1/256 bits, from the current probabilities, using a table of −log₂ p. The decoder doesn't need to know these rules; it follows the coded decisions.</p>
+<ul>
+  <li>If the colour is a candidate, use it, unless coding the residuals is cheaper.</li>
+  <li>Otherwise, if the colour is in the recent list, use it if that is cheaper than the residuals.</li>
+  <li>Otherwise, code the residuals.</li>
+</ul>
+<p>On the 16×4 example image, algorithm 2 coded 30 pixels as the predicted colour, 16 as another candidate and 18 with residuals. At 87 bytes it is larger than algorithm 1's 64 bytes, because such a small image gives the adaptive models too few pixels to learn from. On real images it is almost always smaller (see the <a href="#compare">comparison</a>).</p>
+
+<h3 id="a2-why">Design measurements</h3>
+<p>These steps were measured on <code>test/corpus</code> while the algorithm was designed. Each size is relative to algorithm 1:</p>
+<div class="table-wrap"><table>
+  <tr><th>Step</th><th class="num">Photos</th><th class="num">UI</th></tr>
+  <tr><td>Residual coding only (MED-like blend + arithmetic coding)</td><td class="num">94%</td><td class="num">173%</td></tr>
+  <tr><td>+ neighbour colours and recent colours</td><td class="num">73%</td><td class="num">87%</td></tr>
+  <tr><td>+ hash tables of colours remembered for a neighbourhood</td><td class="num"></td><td class="num">74% → 67%</td></tr>
+  <tr><td>Final</td><td class="num">71%</td><td class="num">66%</td></tr>
+</table></div>
+<ul>
+  <li>Residuals alone were poor on UI images, which need whole colours to be coded.</li>
+  <li>The predicted colour works as a candidate only if its context includes "prediction equals W / N".</li>
+  <li>The fifth predictor, (W + N) / 2, saved 0.6%. NE as a sixth predictor saved only 0.07% more, so it isn't used.</li>
+  <li>A slow-estimate shift of 9 beat 7 and 10.</li>
+</ul>
+
+<!-- ================================================================== -->
+<h2 id="compare">Comparison</h2>
+<p>Total file sizes for the 30 images in <code>test/corpus</code>, against PNG saved by Pillow with <code>optimize=True</code>:</p>
+<div class="table-wrap"><table>
+  <tr><th>Category</th><th class="num">Optimized PNG</th><th class="num">PIX algorithm 1</th><th class="num">PIX algorithm 2</th></tr>
+  <tr><td>Photos (9)</td><td class="num">3.77 MB</td><td class="num">3.40 MB (90%)</td><td class="num">2.43 MB (64%)</td></tr>
+  <tr><td>Renders (8)</td><td class="num">6.29 MB</td><td class="num">5.77 MB (92%)</td><td class="num">4.42 MB (70%)</td></tr>
+  <tr><td>UI and graphics (13)</td><td class="num">4.46 MB</td><td class="num">2.86 MB (64%)</td><td class="num">1.89 MB (42%)</td></tr>
+</table></div>
+
+<div class="table-wrap"><table>
+  <tr><th></th><th>Algorithm 1</th><th>Algorithm 2</th></tr>
+  <tr><td>Unit of coding</td><td>Nibble codes in 16×16 blocks</td><td>Context-modelled bits, pixel by pixel</td></tr>
+  <tr><td>Entropy stage</td><td>zlib (deflate)</td><td>Adaptive binary range coder</td></tr>
+  <tr><td>Prediction</td><td>MED (JPEG-LS)</td><td>Blend of 5 predictors, G error passed on to R and B, bias correction</td></tr>
+  <tr><td>Colour reuse</td><td>last / next-to-last, cache1 (80 per block), cache2 (8192)</td><td>9 candidates (including 2 neighbourhood hash tables), move-to-front list of 16384</td></tr>
+  <tr><td>Integrity check</td><td>Stream structure, sizes and zlib</td><td>CRC-32 of the decoded pixels</td></tr>
+  <tr><td>Speed (1280×960 photo)</td><td>encode 0.35 s, decode 0.06 s</td><td>encode 1.3 s, decode 1.1 s</td></tr>
+  <tr><td>Size vs. PNG</td><td>Smaller on all but one photo (+2%)</td><td>Smaller on every test image</td></tr>
+  <tr><td>Random noise</td><td>113% of raw RGB</td><td>101% of raw RGB</td></tr>
+</table></div>
+<p>Algorithm 2 is larger than algorithm 1 on only 2 of the 30 test images: a small gradient (761 vs. 579 bytes) and a text-mode screenshot (+5%).</p>
+<div class="note"><strong>When to use which:</strong> algorithm 1 decodes about 18 times faster, which matters when images are decoded often. Algorithm 2 gives the smallest files, which matters most for storage and transfer.</div>
+
+</main>
+</div>
+</body>
+</html>
