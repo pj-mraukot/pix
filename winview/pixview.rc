@@ -1,0 +1,4 @@
+// resources of the Windows viewer: icon 1 (used by the main window) and the manifest
+// (1 = CREATEPROCESS_MANIFEST_RESOURCE_ID, 24 = RT_MANIFEST)
+1 ICON "pixview.ico"
+1 24 "pixview.manifest"
